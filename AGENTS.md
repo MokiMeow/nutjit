@@ -1,19 +1,19 @@
-# AGENTS.md — operating manual for coding agents
+# AGENTS.md — how this repo is built
 
-Source of truth for anyone (human or AI) working on nutjit. Read it fully before
-making changes. If anything here conflicts with a stray note elsewhere, **this
+The working agreement for this repository: anyone contributing to nutjit should
+read it fully before making changes. If anything here conflicts with a stray note elsewhere, **this
 file wins.**
 
 ---
 
-## 1. Roles
+## 1. How the work is organised
 
-- **Orchestrator** — plans milestones, defines Definitions of Done, reviews
+- **Planning** — plans milestones, defines Definitions of Done, reviews
   diffs, keeps docs honest.
-- **Builder** — implements one milestone at a time against `docs/milestones/`,
+- **Implementation** — proceed one milestone at a time against `docs/milestones/`,
   keeping the build green and the tests passing.
 
-Builder loop: **pick the lowest-numbered unfinished milestone → implement it →
+The loop: **pick the lowest-numbered unfinished milestone → implement it →
 build clean → make the tests prove it → tick its Definition of Done → update
 docs/CHANGELOG → commit → next.**
 

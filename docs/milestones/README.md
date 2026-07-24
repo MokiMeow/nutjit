@@ -18,7 +18,7 @@ Build them in order — the path is strictly linear (see the
 
 **Goal · Concepts · Tasks · Files · Definition of Done · References.**
 
-## The Builder's loop (from AGENTS.md)
+## The loop (from AGENTS.md)
 
 1. Pick the lowest-numbered unfinished milestone.
 2. Implement its tasks; keep `make all` warning-free.
