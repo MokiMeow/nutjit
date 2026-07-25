@@ -29,12 +29,15 @@ check() {
 }
 
 check_error() {
-    local src="$1"
-    if "$BIN" "$src" >/dev/null 2>&1; then
-        printf '  FAIL  %-46s should have been rejected\n' "$src"
+    local src="$1" jit_ok=0 interp_ok=0
+    "$BIN" "$src" >/dev/null 2>&1 && jit_ok=1
+    "$BIN" --interp "$src" >/dev/null 2>&1 && interp_ok=1
+    if [[ $jit_ok -ne 0 || $interp_ok -ne 0 ]]; then
+        printf '  FAIL  %-46s accepted (jit=%s interp=%s)\n' \
+               "$src" "$jit_ok" "$interp_ok"
         fail=$((fail + 1))
     else
-        printf '  ok    %-46s rejected\n' "$src"
+        printf '  ok    %-46s rejected by both back ends\n' "$src"
         pass=$((pass + 1))
     fi
 }
@@ -52,6 +55,8 @@ check "100 / 10 / 5;"                        2
 check "-5 + 8;"                              3
 check "-(3 * 4);"                            -12
 check "1000000 * 1000000;"                   1000000000000
+check "9223372036854775807 + 1;"              -9223372036854775808
+check "-9223372036854775807 - 2;"             9223372036854775807
 
 echo "----- variables (milestone 1) -----"
 check "let x = 5; x;"                        5
@@ -74,6 +79,7 @@ check "if (2 < 1) { 10; } else { 20; }"      20
 check "let x = 7; if (x > 5) { x * 2; } else { 0; }"   14
 check "if (1) { if (1) { 5; } else { 6; } } else { 7; }" 5
 check "if (0) { 1; }"                        0
+check "if (1) { let x = 3; } else { let x = 4; } x;" 3
 
 echo "----- loops (milestone 3) -----"
 check "let i = 0; while (i < 5) { i = i + 1; } i;"                       5
@@ -101,6 +107,27 @@ check_error "undefined_var;"
 check_error "no_such_fn(1);"
 check_error "let x = 1"
 check_error "if (1) { 2; "
+check_error "fn f(a) { return a; } f();"
+check_error "fn f(a) { return a; } f(1, 2);"
+check_error "fn f(a, a) { return a; } f(1, 2);"
+check_error "fn f(a) { return a; } fn f(b) { return b; } f(1);"
+check_error "return 7;"
+check_error "if (0) { let x = 1; } x;"
+check_error "while (0) { let x = 1; } x;"
+check_error "9223372036854775808;"
+
+echo "----- repl persistence -----"
+repl_output=$(printf 'let x = 7;\nx;\nfn twice(n) { return n * 2; }\ntwice(x);\n' \
+              | "$BIN" --repl)
+repl_values=$(printf '%s\n' "$repl_output" | sed -n 's/^nutjit> //p')
+if [[ "$repl_values" == $'7\n7\ndefined\n14' ]]; then
+    echo "  ok    variables and functions persist across lines"
+    pass=$((pass + 1))
+else
+    echo "  FAIL  REPL state did not persist"
+    printf '%s\n' "$repl_output"
+    fail=$((fail + 1))
+fi
 
 echo "-------------------------------------"
 echo "passed: $pass   failed: $fail"

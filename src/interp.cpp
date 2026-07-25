@@ -4,6 +4,8 @@
  * over a map-based environment. Its job is to be *clearly correct*, not fast.
  * When the JIT and this disagree, the JIT is wrong. */
 
+#include <cstring>
+#include <limits>
 #include <map>
 #include <stdexcept>
 #include <string>
@@ -12,6 +14,28 @@
 #include "interp.hpp"
 
 namespace {
+
+int64_t signed_bits(uint64_t value) {
+    static_assert(sizeof(value) == sizeof(int64_t));
+    int64_t result;
+    std::memcpy(&result, &value, sizeof(result));
+    return result;
+}
+
+int64_t wrap_add(int64_t left, int64_t right) {
+    return signed_bits(static_cast<uint64_t>(left)
+                       + static_cast<uint64_t>(right));
+}
+
+int64_t wrap_sub(int64_t left, int64_t right) {
+    return signed_bits(static_cast<uint64_t>(left)
+                       - static_cast<uint64_t>(right));
+}
+
+int64_t wrap_mul(int64_t left, int64_t right) {
+    return signed_bits(static_cast<uint64_t>(left)
+                       * static_cast<uint64_t>(right));
+}
 
 /* Thrown to unwind out of a `return`. */
 struct ReturnValue {
@@ -71,12 +95,14 @@ private:
             const int64_t a = eval(*node.lhs, env);
             const int64_t b = eval(*node.rhs, env);
             switch (node.op) {
-            case BinOp::Add: return a + b;
-            case BinOp::Sub: return a - b;
-            case BinOp::Mul: return a * b;
+            case BinOp::Add: return wrap_add(a, b);
+            case BinOp::Sub: return wrap_sub(a, b);
+            case BinOp::Mul: return wrap_mul(a, b);
             case BinOp::Div:
                 if (b == 0)
                     throw std::runtime_error("division by zero");
+                if (a == std::numeric_limits<int64_t>::min() && b == -1)
+                    throw std::runtime_error("division overflow");
                 return a / b;
             case BinOp::Lt: return a <  b;
             case BinOp::Gt: return a >  b;

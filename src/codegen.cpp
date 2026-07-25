@@ -24,6 +24,7 @@
  *   48 85 C0           test rax, rax
  *   0F 84 rel32        je
  *   E9 rel32 / E8 rel32  jmp / call
+ *   48 83 EC 08 / 48 83 C4 08  align / restore RSP around a nested call
  *   55 / 48 89 E5      push rbp / mov rbp, rsp
  *   48 81 EC imm32     sub rsp, imm32
  *   48 89 45 d8        mov [rbp+d8], rax      48 8B 45 d8   mov rax, [rbp+d8]
@@ -31,6 +32,8 @@
  */
 
 #include <algorithm>
+#include <cstring>
+#include <limits>
 #include <map>
 #include <set>
 #include <stdexcept>
@@ -40,6 +43,45 @@
 #include "codegen.hpp"
 
 namespace {
+
+int64_t signed_bits(uint64_t value) {
+    static_assert(sizeof(value) == sizeof(int64_t));
+    int64_t result;
+    std::memcpy(&result, &value, sizeof(result));
+    return result;
+}
+
+int64_t wrap_add(int64_t left, int64_t right) {
+    return signed_bits(static_cast<uint64_t>(left)
+                       + static_cast<uint64_t>(right));
+}
+
+int64_t wrap_sub(int64_t left, int64_t right) {
+    return signed_bits(static_cast<uint64_t>(left)
+                       - static_cast<uint64_t>(right));
+}
+
+int64_t wrap_mul(int64_t left, int64_t right) {
+    return signed_bits(static_cast<uint64_t>(left)
+                       * static_cast<uint64_t>(right));
+}
+
+bool contains_call(const Node &node) {
+    if (node.kind == NodeKind::Call)
+        return true;
+    for (const NodePtr *child :
+         {&node.lhs, &node.rhs, &node.then_branch, &node.else_branch}) {
+        if (*child && contains_call(**child))
+            return true;
+    }
+    for (const auto &statement : node.body)
+        if (statement && contains_call(*statement))
+            return true;
+    for (const auto &argument : node.args)
+        if (argument && contains_call(*argument))
+            return true;
+    return false;
+}
 
 /* ---------------------------------------------------------------- folding --
  * Constant folding is a pure AST->AST pass, so it cannot break the back end.
@@ -64,11 +106,13 @@ void fold(Node &node) {
     const int64_t a = node.lhs->value, b = node.rhs->value;
     int64_t result;
     switch (node.op) {
-    case BinOp::Add: result = a + b; break;
-    case BinOp::Sub: result = a - b; break;
-    case BinOp::Mul: result = a * b; break;
+    case BinOp::Add: result = wrap_add(a, b); break;
+    case BinOp::Sub: result = wrap_sub(a, b); break;
+    case BinOp::Mul: result = wrap_mul(a, b); break;
     case BinOp::Div:
-        if (b == 0) return;               // leave it for run time
+        if (b == 0
+                || (a == std::numeric_limits<int64_t>::min() && b == -1))
+            return;                        // leave hardware faults for run time
         result = a / b; break;
     case BinOp::Lt: result = a <  b; break;
     case BinOp::Gt: result = a >  b; break;
@@ -133,6 +177,8 @@ private:
     size_t frame_patch_ = 0;
     std::vector<size_t> return_patches_;
     size_t peep_removed_ = 0;
+    size_t temp_stack_bytes_ = 0;
+    std::vector<uint8_t> free_scratch_{11, 10}; // R10, then R11
 
     // ---- emit helpers ----
     void b(uint8_t x) { code_.push_back(x); }
@@ -145,9 +191,29 @@ private:
         auto u = static_cast<uint64_t>(v);
         for (int i = 0; i < 8; i++) b(static_cast<uint8_t>((u >> (i * 8)) & 0xFF));
     }
+    void imm8(int64_t v) {
+        b(static_cast<uint8_t>(static_cast<int8_t>(v)));
+    }
     void patch32(size_t at, int32_t v) {
         auto u = static_cast<uint32_t>(v);
         for (int i = 0; i < 4; i++) code_[at + i] = static_cast<uint8_t>((u >> (i * 8)) & 0xFF);
+    }
+
+    void push_rax() {
+        b(0x50);                                // push rax
+        temp_stack_bytes_ += 8;
+    }
+
+    void pop_reg(uint8_t reg) {
+        if (temp_stack_bytes_ < 8)
+            throw std::runtime_error("codegen: temporary stack underflow");
+        if (reg >= 8) {
+            b(0x41);
+            b(static_cast<uint8_t>(0x58 + (reg & 7)));
+        } else {
+            b(static_cast<uint8_t>(0x58 + reg));
+        }
+        temp_stack_bytes_ -= 8;
     }
 
     void mov_rax_imm(int64_t v) {
@@ -211,6 +277,8 @@ private:
         locals_.clear();
         next_slot_ = 0;
         return_patches_.clear();
+        temp_stack_bytes_ = 0;
+        free_scratch_ = {11, 10};
 
         bs({0x55});                       // push rbp
         bs({0x48, 0x89, 0xE5});           // mov rbp, rsp
@@ -232,6 +300,10 @@ private:
 
         mov_rax_imm(0);                   // functions default to returning 0
         compile_node(*fn.then_branch);
+        if (temp_stack_bytes_ != 0)
+            throw std::runtime_error("codegen: unbalanced temporary stack");
+        if (free_scratch_.size() != 2)
+            throw std::runtime_error("codegen: leaked scratch register");
 
         for (size_t at : return_patches_)
             patch_jump_to_here(at);
@@ -333,13 +405,24 @@ private:
     }
 
     void compile_binary(const Node &node) {
+        if (emit_binary_immediate(node))
+            return;
+        if (optimise_ && node.op != BinOp::Div
+                && !contains_call(*node.rhs) && !free_scratch_.empty()) {
+            compile_binary_register(node);
+            return;
+        }
+
         compile_node(*node.lhs);
-        b(0x50);                                    // push rax
+        push_rax();
         compile_node(*node.rhs);
         bs({0x48, 0x89, 0xC1});                     // mov rcx, rax  (right)
-        b(0x58);                                    // pop rax       (left)
+        pop_reg(0);                                  // pop rax       (left)
+        emit_binary_rax_rcx(node.op);
+    }
 
-        switch (node.op) {
+    void emit_binary_rax_rcx(BinOp op) {
+        switch (op) {
         case BinOp::Add: bs({0x48, 0x01, 0xC8}); break;
         case BinOp::Sub: bs({0x48, 0x29, 0xC8}); break;
         case BinOp::Mul: bs({0x48, 0x0F, 0xAF, 0xC1}); break;
@@ -349,21 +432,86 @@ private:
             break;
         default: {
             bs({0x48, 0x39, 0xC8});                 // cmp rax, rcx
-            uint8_t setcc;
-            switch (node.op) {
-            case BinOp::Lt: setcc = 0x9C; break;    // setl
-            case BinOp::Gt: setcc = 0x9F; break;    // setg
-            case BinOp::Le: setcc = 0x9E; break;    // setle
-            case BinOp::Ge: setcc = 0x9D; break;    // setge
-            case BinOp::Eq: setcc = 0x94; break;    // sete
-            case BinOp::Ne: setcc = 0x95; break;    // setne
-            default: throw std::runtime_error("codegen: unknown operator");
-            }
-            bs({0x0F, setcc, 0xC0});                // setcc al
-            bs({0x48, 0x0F, 0xB6, 0xC0});           // movzx rax, al
+            emit_setcc(op);
             break;
         }
         }
+    }
+
+    void emit_setcc(BinOp op) {
+        uint8_t opcode;
+        switch (op) {
+        case BinOp::Lt: opcode = 0x9C; break;        // setl
+        case BinOp::Gt: opcode = 0x9F; break;        // setg
+        case BinOp::Le: opcode = 0x9E; break;        // setle
+        case BinOp::Ge: opcode = 0x9D; break;        // setge
+        case BinOp::Eq: opcode = 0x94; break;        // sete
+        case BinOp::Ne: opcode = 0x95; break;        // setne
+        default:
+            throw std::runtime_error("codegen: expected a comparison");
+        }
+        bs({0x0F, opcode, 0xC0});                    // setcc al
+        bs({0x48, 0x0F, 0xB6, 0xC0});               // movzx rax, al
+    }
+
+    bool emit_binary_immediate(const Node &node) {
+        if (!optimise_ || node.rhs->kind != NodeKind::Number
+                || node.rhs->value < -128 || node.rhs->value > 127
+                || node.op == BinOp::Div)
+            return false;
+
+        compile_node(*node.lhs);
+        switch (node.op) {
+        case BinOp::Add:
+            bs({0x48, 0x83, 0xC0}); imm8(node.rhs->value); // add rax, imm8
+            break;
+        case BinOp::Sub:
+            bs({0x48, 0x83, 0xE8}); imm8(node.rhs->value); // sub rax, imm8
+            break;
+        case BinOp::Mul:
+            bs({0x48, 0x6B, 0xC0}); imm8(node.rhs->value); // imul rax, rax, imm8
+            break;
+        default:
+            bs({0x48, 0x83, 0xF8}); imm8(node.rhs->value); // cmp rax, imm8
+            emit_setcc(node.op);
+            break;
+        }
+        return true;
+    }
+
+    void compile_binary_register(const Node &node) {
+        compile_node(*node.lhs);
+        const uint8_t scratch = free_scratch_.back();
+        free_scratch_.pop_back();
+
+        // 49 89 C2/C3: mov r10/r11, rax (REX.W+B, 89 /r)
+        bs({0x49, 0x89, static_cast<uint8_t>(0xC0 | (scratch & 7))});
+        compile_node(*node.rhs);
+
+        switch (node.op) {
+        case BinOp::Add:
+            // 49 03 C2/C3: add rax, r10/r11
+            bs({0x49, 0x03, static_cast<uint8_t>(0xC0 | (scratch & 7))});
+            break;
+        case BinOp::Mul:
+            // 49 0F AF C2/C3: imul rax, r10/r11
+            bs({0x49, 0x0F, 0xAF,
+                static_cast<uint8_t>(0xC0 | (scratch & 7))});
+            break;
+        case BinOp::Sub:
+            // 49 29 C2/C3: sub r10/r11, rax; 4C 89 D0/D8: mov rax, scratch
+            bs({0x49, 0x29, static_cast<uint8_t>(0xC0 | (scratch & 7))});
+            bs({0x4C, 0x89,
+                static_cast<uint8_t>(0xC0 | ((scratch & 7) << 3))});
+            break;
+        default:
+            // 49 39 C2/C3: cmp r10/r11, rax (left - right)
+            bs({0x49, 0x39, static_cast<uint8_t>(0xC0 | (scratch & 7))});
+            emit_setcc(node.op);
+            break;
+        }
+
+        free_scratch_.push_back(scratch);
     }
 
     void compile_call(const Node &node) {
@@ -375,22 +523,31 @@ private:
         // call from clobbering an argument register already loaded.
         for (const auto &arg : node.args) {
             compile_node(*arg);
-            b(0x50);                                // push rax
+            push_rax();
         }
         for (size_t i = node.args.size(); i-- > 0;) {
             const uint8_t reg = ARG_REGS[i];
-            // pop reg
-            if (reg >= 8) { b(0x41); b(static_cast<uint8_t>(0x58 + (reg & 7))); }
-            else          { b(static_cast<uint8_t>(0x58 + reg)); }
+            pop_reg(reg);
         }
 
+        // Expression temporaries may have shifted RSP by eight bytes. System V
+        // requires 16-byte alignment immediately before CALL.
+        const bool needs_padding = temp_stack_bytes_ % 16 != 0;
+        if (needs_padding) {
+            bs({0x48, 0x83, 0xEC, 0x08});           // sub rsp, 8
+            temp_stack_bytes_ += 8;
+        }
         b(0xE8);                                    // call rel32
         call_patches_.push_back({code_.size(), node.name});
         imm32(0);
+        if (needs_padding) {
+            bs({0x48, 0x83, 0xC4, 0x08});           // add rsp, 8
+            temp_stack_bytes_ -= 8;
+        }
     }
 
     static NodePtr clone(const Node &node) {
-        auto copy = Node::make(node.kind);
+        auto copy = Node::make(node.kind, node.pos);
         copy->value = node.value;
         copy->name = node.name;
         copy->op = node.op;
@@ -415,7 +572,7 @@ CompiledProgram codegen(const Node &program, bool optimise) {
         for (const auto &stmt : program.body) {
             struct Cloner {
                 static NodePtr run(const Node &n) {
-                    auto c = Node::make(n.kind);
+                    auto c = Node::make(n.kind, n.pos);
                     c->value = n.value; c->name = n.name; c->op = n.op;
                     c->params = n.params;
                     if (n.lhs) c->lhs = run(*n.lhs);

@@ -8,12 +8,15 @@
  *   nutjit --bench                  JIT vs interpreter on fib(30)
  */
 
+#include <algorithm>
 #include <chrono>
 #include <cstdio>
 #include <fstream>
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include "codegen.hpp"
 #include "interp.hpp"
@@ -53,6 +56,14 @@ double seconds_since(Clock::time_point start) {
     return std::chrono::duration<double>(Clock::now() - start).count();
 }
 
+double median(std::vector<double> samples) {
+    std::sort(samples.begin(), samples.end());
+    const size_t middle = samples.size() / 2;
+    if (samples.size() % 2 != 0)
+        return samples[middle];
+    return (samples[middle - 1] + samples[middle]) / 2.0;
+}
+
 const char *FIB_SOURCE =
     "fn fib(n) {\n"
     "  if (n < 2) { return n; }\n"
@@ -61,33 +72,65 @@ const char *FIB_SOURCE =
     "fib(30);\n";
 
 int benchmark() {
-    std::printf("nutjit benchmark — fib(30), single-threaded\n\n");
+    constexpr int INTERPRETER_RUNS = 3;
+    constexpr int COMPILE_RUNS = 21;
+    constexpr int JIT_RUNS = 21;
+
+    std::printf("nutjit benchmark — fib(30), single-threaded medians\n");
+    std::printf("  %d interpreter runs, %d compile samples, %d JIT runs\n\n",
+                INTERPRETER_RUNS, COMPILE_RUNS, JIT_RUNS);
 
     const auto tokens = tokenize(FIB_SOURCE);
     const NodePtr ast = parse(tokens);
 
-    // Interpreter
-    auto start = Clock::now();
-    const int64_t interp_result = interpret(*ast);
-    const double interp_time = seconds_since(start);
+    std::vector<double> interp_samples;
+    int64_t interp_result = 0;
+    for (int i = 0; i < INTERPRETER_RUNS; i++) {
+        const auto start = Clock::now();
+        interp_result = interpret(*ast);
+        interp_samples.push_back(seconds_since(start));
+    }
+    const double interp_time = median(std::move(interp_samples));
 
-    // JIT, unoptimised
-    start = Clock::now();
-    const CompiledProgram naive = codegen(*ast, false);
-    const double naive_compile = seconds_since(start);
+    CompiledProgram naive;
+    std::vector<double> naive_compile_samples;
+    for (int i = 0; i < COMPILE_RUNS; i++) {
+        const auto start = Clock::now();
+        CompiledProgram candidate = codegen(*ast, false);
+        naive_compile_samples.push_back(seconds_since(start));
+        if (i == 0)
+            naive = std::move(candidate);
+    }
+    const double naive_compile = median(std::move(naive_compile_samples));
     const JitBuffer naive_buffer(naive.code);
-    start = Clock::now();
-    const int64_t naive_result = naive_buffer.run(naive.entry_offset);
-    const double naive_time = seconds_since(start);
+    std::vector<double> naive_samples;
+    int64_t naive_result = 0;
+    for (int i = 0; i < JIT_RUNS; i++) {
+        const auto start = Clock::now();
+        naive_result = naive_buffer.run(naive.entry_offset);
+        naive_samples.push_back(seconds_since(start));
+    }
+    const double naive_time = median(std::move(naive_samples));
 
-    // JIT, optimised
-    start = Clock::now();
-    const CompiledProgram opt = codegen(*ast, true);
-    const double opt_compile = seconds_since(start);
+    CompiledProgram opt;
+    std::vector<double> opt_compile_samples;
+    for (int i = 0; i < COMPILE_RUNS; i++) {
+        const auto start = Clock::now();
+        CompiledProgram candidate = codegen(*ast, true);
+        opt_compile_samples.push_back(seconds_since(start));
+        if (i == 0)
+            opt = std::move(candidate);
+    }
+    const double opt_compile = median(std::move(opt_compile_samples));
     const JitBuffer opt_buffer(opt.code);
-    start = Clock::now();
-    const int64_t opt_result = opt_buffer.run(opt.entry_offset);
-    const double opt_time = seconds_since(start);
+    std::vector<double> opt_samples;
+    int64_t opt_result = 0;
+    for (int i = 0; i < JIT_RUNS; i++) {
+        const auto start = Clock::now();
+        opt_result = opt_buffer.run(opt.entry_offset);
+        opt_samples.push_back(seconds_since(start));
+    }
+    const double opt_time = median(std::move(opt_samples));
 
     if (interp_result != naive_result || interp_result != opt_result) {
         std::fprintf(stderr,
@@ -113,29 +156,32 @@ int benchmark() {
 
 int repl() {
     std::printf("nutjit REPL — expressions and definitions are compiled to machine code.\n");
-    std::printf("Definitions persist across lines. Ctrl-D to exit.\n\n");
+    std::printf("Successful inputs persist across lines. Ctrl-D to exit.\n\n");
 
-    std::string accumulated;   // function definitions carry over
+    // The language has no external side effects, so replaying successful input
+    // reconstructs the session deterministically while keeping the JIT API
+    // stateless.
+    std::string accumulated;
     std::string line;
     while (true) {
         std::printf("nutjit> ");
         std::fflush(stdout);
         if (!std::getline(std::cin, line))
             break;
-        if (line.empty())
+        const size_t last = line.find_last_not_of(" \t\r\n");
+        if (last == std::string::npos)
             continue;
-
-        // A definition is remembered; anything else is evaluated against the
-        // definitions seen so far.
-        const bool is_definition = line.rfind("fn ", 0) == 0;
-        std::string program = accumulated + (is_definition ? line : line);
-        if (!is_definition && program.find(';') == std::string::npos)
-            program += ";";
+        line.erase(last + 1);
+        const size_t first = line.find_first_not_of(" \t");
+        const bool is_definition = line.compare(first, 3, "fn ") == 0;
+        if (line[last] != ';' && line[last] != '}')
+            line += ";";
+        const std::string program = accumulated + line + "\n";
 
         try {
             const int64_t result = jit_run(program, false);
+            accumulated = program;
             if (is_definition) {
-                accumulated += line + "\n";
                 std::printf("defined\n");
             } else {
                 std::printf("%lld\n", (long long)result);

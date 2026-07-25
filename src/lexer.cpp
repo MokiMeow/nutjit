@@ -5,6 +5,7 @@
  * pass and makes `lettuce` an identifier rather than `let` + `tuce`. */
 
 #include <cctype>
+#include <limits>
 #include <stdexcept>
 #include <string>
 
@@ -56,7 +57,13 @@ std::vector<Token> tokenize(const std::string &source) {
             int64_t value = 0;
             while (i < source.size()
                    && std::isdigit(static_cast<unsigned char>(source[i]))) {
-                value = value * 10 + (source[i] - '0');
+                const int digit = source[i] - '0';
+                if (value > (std::numeric_limits<int64_t>::max() - digit) / 10) {
+                    throw std::runtime_error(
+                        "integer literal out of range at offset "
+                        + std::to_string(start));
+                }
+                value = value * 10 + digit;
                 i++;
             }
             Token t{TokKind::Number, value, {}, start};

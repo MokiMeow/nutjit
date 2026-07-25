@@ -37,6 +37,7 @@ run: $(BIN)
 
 test: $(BIN)
 	@bash tests/run-tests.sh $(BIN)
+	@bash tests/check-encodings.sh $(BIN)
 
 bench: $(BIN)
 	@$(BIN) --bench

@@ -35,6 +35,7 @@ using NodePtr = std::unique_ptr<Node>;
 
 struct Node {
     NodeKind kind;
+    size_t   pos = 0;         // source byte offset for semantic diagnostics
 
     int64_t     value = 0;   // Number
     std::string name;        // Var, Assign, Let, Call, Function
@@ -48,26 +49,27 @@ struct Node {
     std::vector<NodePtr>     args;    // Call arguments
     std::vector<std::string> params;  // Function parameters
 
-    static NodePtr make(NodeKind kind) {
+    static NodePtr make(NodeKind kind, size_t pos = 0) {
         auto n = std::make_unique<Node>();
         n->kind = kind;
+        n->pos = pos;
         return n;
     }
 
-    static NodePtr number(int64_t v) {
-        auto n = make(NodeKind::Number);
+    static NodePtr number(int64_t v, size_t pos = 0) {
+        auto n = make(NodeKind::Number, pos);
         n->value = v;
         return n;
     }
 
-    static NodePtr var(std::string name) {
-        auto n = make(NodeKind::Var);
+    static NodePtr var(std::string name, size_t pos = 0) {
+        auto n = make(NodeKind::Var, pos);
         n->name = std::move(name);
         return n;
     }
 
-    static NodePtr binary(BinOp op, NodePtr lhs, NodePtr rhs) {
-        auto n = make(NodeKind::Binary);
+    static NodePtr binary(BinOp op, NodePtr lhs, NodePtr rhs, size_t pos = 0) {
+        auto n = make(NodeKind::Binary, pos);
         n->op = op;
         n->lhs = std::move(lhs);
         n->rhs = std::move(rhs);
