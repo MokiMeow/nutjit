@@ -82,12 +82,12 @@ Specs with Definitions of Done live in `docs/milestones/`.
 | # | Milestone | Adds | Spec |
 |---|-----------|------|------|
 | 0 | Arithmetic JIT | lexer, parser, x86-64 codegen, executable memory | [spec](docs/milestones/milestone-0-arithmetic-jit.md) ✅ |
-| 1 | Variables | `let`, environment, stack frames, locals at `[rbp-N]` | [spec](docs/milestones/milestone-1-variables.md) |
-| 2 | Conditionals | comparisons, `if`/`else`, `cmp`/`setcc`, jump backpatching | [spec](docs/milestones/milestone-2-conditionals.md) |
-| 3 | Loops | `while`, backward jumps, loop-scoped codegen | [spec](docs/milestones/milestone-3-loops.md) |
-| 4 | Functions | multiple functions, args in registers, recursion, `fib` | [spec](docs/milestones/milestone-4-functions.md) |
-| 5 | Optimisation | register allocation, constant folding, peephole | [spec](docs/milestones/milestone-5-optimisation.md) |
-| 6 | Polish | REPL, JIT-vs-interpreter benchmark, CI, tag `v1.0.0` | [spec](docs/milestones/milestone-6-polish.md) |
+| 1 | Variables | `let`, environment, stack frames, locals at `[rbp-N]` | [spec](docs/milestones/milestone-1-variables.md) ✅ |
+| 2 | Conditionals | comparisons, `if`/`else`, `cmp`/`setcc`, jump backpatching | [spec](docs/milestones/milestone-2-conditionals.md) ✅ |
+| 3 | Loops | `while`, backward jumps, loop-scoped codegen | [spec](docs/milestones/milestone-3-loops.md) ✅ |
+| 4 | Functions | multiple functions, args in registers, recursion, `fib` | [spec](docs/milestones/milestone-4-functions.md) ✅ |
+| 5 | Optimisation | register allocation, constant folding, peephole | [spec](docs/milestones/milestone-5-optimisation.md) ✅ |
+| 6 | Polish | persistent REPL, benchmark, tests, CI, releases | [spec](docs/milestones/milestone-6-polish.md) ✅ |
 
 **Definition of Done (whole project):** nutjit compiles a small language with
 variables, control flow, and recursive functions to native x86-64 at runtime,

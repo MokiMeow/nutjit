@@ -1,0 +1,13 @@
+{"version":2,"width":96,"height":18,"timestamp":1784933400,"env":{"SHELL":"/bin/bash","TERM":"xterm-256color"}}
+[0.200000,"o","$ ./build/nutjit --repl\r\n"]
+[0.450000,"o","nutjit REPL — expressions and definitions are compiled to machine code.\r\n"]
+[0.650000,"o","Successful inputs persist across lines. Ctrl-D to exit.\r\n\r\n"]
+[0.900000,"o","nutjit> let x = 7;\r\n"]
+[1.050000,"o","7\r\n"]
+[1.250000,"o","nutjit> x;\r\n"]
+[1.400000,"o","7\r\n"]
+[1.650000,"o","nutjit> fn twice(n) { return n * 2; }\r\n"]
+[1.850000,"o","defined\r\n"]
+[2.100000,"o","nutjit> twice(x);\r\n"]
+[2.300000,"o","14\r\n"]
+[2.600000,"o","nutjit> \r\n"]

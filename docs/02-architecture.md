@@ -1,67 +1,41 @@
 # 02 — Architecture
 
-Four stages, each a separate translation unit with one job. Data flows one way;
-no stage knows about the stages after it.
+Data flows through explicit stages:
 
 ```
-┌────────────┐  std::string   ┌────────────┐  vector<Token> ┌────────────┐
-│  lexer.cpp │───────────────▶│ parser.cpp │───────────────▶│    AST     │
-└────────────┘                └────────────┘                └─────┬──────┘
-                                                                  │ NodePtr
-                                                                  ▼
-┌────────────────────┐  int64_t   ┌────────────┐  vector<uint8_t> ┌──────────┐
-│  the CPU (call it) │◀───────────│ jitmem.cpp │◀─────────────────│codegen.cpp│
-└────────────────────┘            └────────────┘                  └──────────┘
+source
+  → lexer (tokens with byte offsets)
+  → parser + semantic validator (AST)
+  → optional AST constant folding
+  → x86-64 byte emitter
+  → W^X executable memory
+  → CPU
 ```
 
-## Stage responsibilities
+The same validated AST can instead run through `src/interp.cpp`, which is the
+correctness oracle and benchmark baseline.
 
-| Stage | File | In → Out | Owns |
-|-------|------|----------|------|
-| Lexer | `src/lexer.cpp` | text → `vector<Token>` | character classification, number scanning, source offsets |
-| Parser | `src/parser.cpp` | tokens → `NodePtr` | grammar, precedence, associativity, syntax errors |
-| Codegen | `src/codegen.cpp` | AST → `vector<uint8_t>` | instruction selection and byte encoding |
-| JIT memory | `src/jitmem.cpp` | bytes → callable | `mmap`/`mprotect`, W^X, lifetime |
+## Responsibilities
 
-`src/main.cpp` wires them together and handles CLI flags and error reporting.
+| Stage | File | Owns |
+|-------|------|------|
+| Lexer | `src/lexer.cpp` | scanning, checked literals, source offsets |
+| Parser/validator | `src/parser.cpp` | grammar, precedence, names, arity, definite declarations |
+| Optimizer/codegen | `src/codegen.cpp` | folding, register/spill policy, instruction encoding, patches |
+| Interpreter | `src/interp.cpp` | independent AST evaluation |
+| JIT memory | `src/jitmem.cpp` | page allocation, W^X transition, lifetime |
+| CLI | `src/main.cpp` | modes, persistent REPL, benchmark, error reporting |
 
-## Why this split matters
+## Backend model
 
-- **The AST is the contract.** The parser doesn't know x86 exists; the code
-  generator doesn't know what the source looked like. That's what makes a second
-  backend (ARM64) a stretch goal rather than a rewrite.
-- **`JitBuffer` owns the memory.** RAII: the pages are unmapped in the
-  destructor, and the class is non-copyable so ownership is unambiguous.
-- **Errors are exceptions with offsets.** Lexer and parser throw
-  `std::runtime_error` including the byte offset; `main` catches and prints. No
-  stage calls `exit()`.
+The naive baseline leaves each expression in `RAX` and saves left operands with
+`push`/`pop`. The optimized path folds constants, uses compact immediates, and
+keeps common intermediates in caller-saved `R10` and `R11`. If the scratch pool
+is exhausted, or a live value must survive a nested generated call, it spills
+to the stack. Every temporary push is tracked so calls receive the alignment
+required by the System V ABI.
 
-## The code generator's model (milestone 0)
+The AST remains the boundary between frontend and backend. JIT memory is owned
+by a non-copyable RAII object and is writable only during population.
 
-A **stack machine**: every expression leaves its value in `RAX`. A binary node
-compiles as
-
-```
-  <compile left>          ; result in rax
-  push rax
-  <compile right>         ; result in rax
-  mov rcx, rax            ; right operand
-  pop rax                 ; left operand
-  <one instruction>       ; add/sub/imul/idiv rax, rcx
-```
-
-This needs no register allocator and generalises to any expression depth, at the
-cost of redundant pushes and pops — exactly the inefficiency milestone 5
-replaces with real register allocation, so the improvement is measurable.
-
-## How the language grows
-
-| Milestone | Lexer | Parser | Codegen | Runtime |
-|-----------|-------|--------|---------|---------|
-| 1 variables | identifiers, `let`, `=` | statements, environment | `rbp` frame, `[rbp-N]` slots | — |
-| 2 conditionals | `< > == !=` | `if`/`else` | `cmp`/`setcc`, `jcc` + backpatching | — |
-| 3 loops | `while` | loop node | backward jumps | — |
-| 4 functions | `fn`, `,` | defs, calls | arg registers, `call`/`ret`, alignment | multiple buffers |
-| 5 optimisation | — | — | register allocator, folding, peephole | — |
-
-See the [roadmap](04-roadmap.md) and the [milestones](milestones/).
+See the [roadmap](04-roadmap.md) and [milestone specs](milestones/).

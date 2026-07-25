@@ -17,9 +17,10 @@ welcome.
 1. Pick the lowest-numbered unfinished milestone in
    [docs/milestones/](docs/milestones/), or an open issue.
 2. Branch from `main`: `git checkout -b milestone-2-conditionals`.
-3. Implement it. `make clean && make all` must be warning-free and `make test`
-   must pass at every commit.
-4. Add test cases for the new feature — values must come from JIT-compiled code.
+3. Implement it. A clean `-Werror` build and `make test` must pass at every
+   commit.
+4. Add differential cases for behavior and byte-level assertions when an exact
+   encoding is part of the contract.
 5. Update the relevant doc and tick the Definition of Done.
 6. Open a PR into `main`; CI must be green.
 

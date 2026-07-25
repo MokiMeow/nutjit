@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="390" viewBox="0 0 960 390" role="img" aria-labelledby="title desc">
+  <title id="title">nutjit REPL compiles persistent variables and functions</title>
+  <desc id="desc">Terminal session defining a variable and function, then evaluating a JIT-compiled call.</desc>
+  <rect width="960" height="390" rx="14" fill="#0d1117"/>
+  <rect width="960" height="42" rx="14" fill="#161b22"/>
+  <rect y="28" width="960" height="14" fill="#161b22"/>
+  <circle cx="24" cy="21" r="6" fill="#ff5f56"/>
+  <circle cx="44" cy="21" r="6" fill="#ffbd2e"/>
+  <circle cx="64" cy="21" r="6" fill="#27c93f"/>
+  <text x="480" y="27" text-anchor="middle" fill="#8b949e" font-family="ui-monospace, monospace" font-size="14">nutjit — native x86-64 REPL</text>
+  <g font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="17">
+    <text x="24" y="76" fill="#7ee787">$ ./build/nutjit --repl</text>
+    <text x="24" y="112" fill="#8b949e">Successful inputs persist across lines.</text>
+    <text x="24" y="158" fill="#58a6ff">nutjit&gt; <tspan fill="#c9d1d9">let x = 7;</tspan></text>
+    <text x="24" y="194" fill="#7ee787">7</text>
+    <text x="24" y="230" fill="#58a6ff">nutjit&gt; <tspan fill="#c9d1d9">x;</tspan> <tspan fill="#7ee787">  7</tspan></text>
+    <text x="24" y="276" fill="#58a6ff">nutjit&gt; <tspan fill="#c9d1d9">fn twice(n) { return n * 2; }</tspan></text>
+    <text x="24" y="312" fill="#7ee787">defined</text>
+    <text x="24" y="348" fill="#58a6ff">nutjit&gt; <tspan fill="#c9d1d9">twice(x);</tspan> <tspan fill="#7ee787">  14</tspan></text>
+  </g>
+</svg>

@@ -1,71 +1,45 @@
-# Milestone 6 — Polish ✅ (done)
+# Milestone 6 — Polish ✅
 
-**Goal:** a REPL, an honest benchmark, green CI, and `v1.0.0`.
+**Goal:** a persistent REPL, an honest benchmark, comprehensive tests, green
+CI, and reproducible releases.
 
 ## What shipped
 
-### Proof it works
-- [x] `tests/run-tests.sh` covers every language feature — arithmetic,
-      precedence, associativity, variables, assignment, all six comparisons,
-      `if`/`else` including nesting, `while` including zero-iteration and
-      nested loops, functions, forward references, recursion, and rejected
-      syntax/name errors. **51 cases.**
-- [x] Every case is a **differential test**: the program runs through the JIT
-      *and* the reference interpreter, and both must agree. This is what catches
-      codegen that returns a plausible wrong number.
-- [x] CI on an x86-64 runner: warning-free build, `make test`, and `make bench`
-      as a smoke run.
-
-### Presentation
-- [x] The benchmark table at the top of the README, with the conditions stated
-      and the flat optimised row explained rather than hidden.
-- [x] A `--dump` walkthrough showing real machine code, including the folded
-      `mov eax, 13`.
-- [x] The pipeline diagram (source → lexer → parser → AST → codegen → bytes →
-      `mmap` → CALL) linking to [docs/05](../05-x86-codegen.md).
-
-### Features
-- [x] A **REPL** (`--repl`): compiles each line to machine code and runs it,
-      with function definitions persisting across lines.
-- [x] `--file` to run a program from disk; `--interp` to run through the
-      reference back end; `--bench` for the comparison.
-
-### Hygiene
-- [x] All status tables accurate; every milestone's Definition of Done ticked
-      (and milestone 5's deferred item marked deferred, not ticked).
-- [x] `CHANGELOG.md` updated.
-- [x] Tagged `v1.0.0`.
-
-## Not done
-
-- [ ] ~~Golden-hex encoding tests~~ — the differential tests catch wrong
-      *behaviour*; byte-exact assertions would additionally catch a wrong
-      *encoding* that happens to behave correctly. Worth adding, not done.
-- [ ] ~~An asciinema/GIF of the REPL~~ — the README shows transcripts instead.
-
-Listed rather than silently dropped.
+- [x] 63 behavioral cases covering every language feature and important
+      rejection path.
+- [x] Every valid case executes through the JIT and interpreter and must agree;
+      every invalid case must be rejected by both modes.
+- [x] Six byte-level checks covering folded constants, scratch-register
+      arithmetic, signed immediates, and nested-call alignment.
+- [x] A REPL whose successful variables and functions persist across inputs.
+- [x] `--file`, `--interp`, `--dump`, and a repeated-median `--bench`.
+- [x] A README benchmark, architecture links, and recorded REPL demonstration.
+- [x] CI gates a `-Werror` build, all tests, a sample run, and the benchmark
+      smoke test.
+- [x] Accurate status docs and changelog.
+- [x] `v1.0.0` for the original completed project and `v1.1.0` for the audited,
+      hardened release.
 
 ## Definition of Done
 
-- [x] CI green on `main`: warning-free build, all tests, bench runs.
-- [x] README opens with the benchmark table and a working demo.
-- [x] The REPL works for expressions, variables, and function definitions.
-- [x] `v1.0.0` tagged.
+- [x] CI is green on `main`.
+- [x] README opens with a working demo and measured benchmark.
+- [x] The REPL works for expressions, variables, and functions across inputs.
+- [x] Behavioral and byte-exact tests are green.
+- [x] A release tag identifies the verified main commit.
 
 ## Verified
 
 ```
-51/51 tests pass (JIT and interpreter agree on every one)
-fib(30) = 832040 from JIT-compiled machine code
-887× faster than the tree-walking interpreter
-2000-deep recursion holds — stack alignment is correct
+63/63 behavioral tests pass in both backends
+6/6 encoding properties pass
+fib(30) = 832040 from interpreter, naive JIT, and optimized JIT
+2000-deep recursion holds with aligned nested calls
 ```
 
-## Stretch goals (after v1.0.0)
+## Future extensions
 
-- **Register allocation** — the deferred half of milestone 5, and the biggest
-  remaining performance win.
-- An **ARM64 backend** behind the same AST (remember the instruction-cache
-  flush that x86-64 does not need).
-- Strings and a small heap; an SSA IR with linear-scan allocation; a tracing
-  tier that re-optimises hot loops.
+- A larger allocator backed by an IR and liveness analysis.
+- An ARM64 backend with explicit instruction-cache synchronization.
+- Strings, a small heap, and richer types.
+- A tracing tier for hot loops.

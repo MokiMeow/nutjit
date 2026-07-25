@@ -2,65 +2,66 @@
 
 <p align="center">
   <em>A small language with a JIT compiler that emits real x86-64 machine code
-  into executable memory and jumps to it — no LLVM, no interpreter in the
-  execution path, no dependencies.</em>
+  into executable memory and jumps to it — no LLVM and no interpreter in the
+  execution path.</em>
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/arch-x86__64-blue" alt="x86_64">
   <img src="https://img.shields.io/badge/lang-C%2B%2B17-orange" alt="C++17">
   <img src="https://img.shields.io/badge/backend-hand--rolled%20codegen-red" alt="hand-rolled codegen">
-  <img src="https://img.shields.io/badge/release-v1.0.0-brightgreen" alt="v1.0.0">
+  <img src="https://img.shields.io/badge/release-v1.1.0-brightgreen" alt="v1.1.0">
   <img src="https://img.shields.io/badge/license-MIT-lightgrey" alt="MIT">
 </p>
 
----
+<p align="center">
+  <img src="docs/assets/repl-demo.svg" width="900" alt="nutjit REPL demo showing persistent variables and functions">
+</p>
 
 ## What this is
 
-Most "write a language" projects stop at a tree-walking interpreter, or hand
-code generation to LLVM. nutjit does neither: source goes through a lexer, a
-recursive-descent parser, and its own **x86-64 code generator**; the resulting
-bytes are written into `mmap`'d executable pages, cast to a function pointer,
-and **called**. The number it prints was computed by machine code this program
-wrote at runtime.
+Source passes through a hand-written lexer, a recursive-descent parser with
+semantic validation, and nutjit's own x86-64 code generator. The emitted bytes
+are copied into writable pages, those pages become read/execute-only, and the
+host calls the generated function. The result really was computed by machine
+code written at runtime.
 
 ```
-source ──▶ lexer ──▶ parser ──▶ AST ──▶ codegen ──▶ bytes ──▶ mmap+mprotect ──▶ CALL
-"fib(30)"   tokens    grammar          x86-64        55 48 89…   R|X pages      832040
+source → lexer → parser + validation → AST → optimise → x86-64 bytes → W^X memory → CALL
 ```
 
-## The result
+## Measured result
+
+One representative WSL2 run of `make bench`:
 
 ```
-$ nutjit --bench
-nutjit benchmark — fib(30), single-threaded
+nutjit benchmark — fib(30), single-threaded medians
+  3 interpreter runs, 21 compile samples, 21 JIT runs
 
   fib(30) = 832040  (all three back ends agree)
 
   implementation           run (ms) compile (ms)    speedup
-  tree-walking interp       5075.75            -       1.0x
-  nutjit (naive)               5.72        0.008     887.1x
-  nutjit (optimised)           5.78        0.033     877.5x
+  tree-walking interp       3507.69            -       1.0x
+  nutjit (naive)               5.08        0.001     690.9x
+  nutjit (optimised)           4.72        0.002     742.5x
 
-  code size: naive 200 bytes, optimised 170 bytes
+  code size: naive 208 bytes, optimised 151 bytes
 ```
 
-**887× faster than interpreting the same AST**, and the whole compile takes
-**8 microseconds** — that is the JIT trade in one table.
-
-Two honest notes on it. The optimised and naive rows are the same speed here
-because `fib` has no constant subexpressions to fold; folding shows up as
-**code size** (200 → 170 bytes), and on constant-heavy code it is dramatic:
+Timing varies by host, so the harness reports medians rather than presenting a
+single sample as a constant. The optimized backend combines constant folding,
+short immediate encodings, and a small `R10`/`R11` scratch-register allocator.
+It spills when an expression exhausts the pool or must preserve a value across
+a call.
 
 ```
-$ nutjit --dump "2 + 3 * 4 - 1;"
-...  b8 0d 00 00 00  ...      # mov eax, 13 — the entire expression, one instruction
+$ ./build/nutjit --dump "2 + 3 * 4 - 1;"
+b8 0d 00 00 00        # mov eax, 13 — one instruction
 ```
 
 ## The language
 
-```rust
+```text
 fn fib(n) {
   if (n < 2) { return n; }
   return fib(n - 1) + fib(n - 2);
@@ -75,86 +76,71 @@ while (i < 10) {
 total;
 ```
 
-Integers, `let` bindings and assignment, `+ - * /`, comparisons
-(`< > <= >= == !=`), `if`/`else`, `while`, and functions with up to six
-parameters and full recursion.
+The language has signed 64-bit integers, `let`, assignment, arithmetic,
+comparisons, `if`/`else`, `while`, and functions with up to six parameters and
+recursion. The validator rejects unknown names, duplicate functions or
+parameters, wrong call arity, top-level `return`, and variables that are not
+definitely declared on every control-flow path.
 
-## Why it is interesting (the depth on show)
+## Why it is interesting
 
-- **A compiler pipeline you can read** — hand-written lexer, recursive-descent
-  parser where precedence falls out of the grammar's shape, and a typed AST.
-  ([docs/03-lexer-and-parser.md](docs/03-lexer-and-parser.md))
-- **Machine-code generation by hand** — REX prefixes, ModR/M bytes, `cqo`
-  before `idiv`, `setcc`+`movzx` for comparisons, and **jump backpatching**:
-  emit a placeholder displacement, record it, fill in the distance once the
-  target is known. ([docs/05-x86-codegen.md](docs/05-x86-codegen.md))
-- **Real stack frames and the System V ABI** — locals at `[rbp-8n]`, arguments
-  in `RDI/RSI/RDX/RCX/R8/R9`, frames rounded to 16 bytes so `RSP` stays aligned
-  at every call. Verified by 2000-deep recursion.
-  ([docs/07-calling-convention.md](docs/07-calling-convention.md))
-- **W^X executable memory** — pages mapped writable, filled, then flipped to
-  read+execute before the jump.
-  ([docs/06-jit-memory.md](docs/06-jit-memory.md))
-- **A second back end as the oracle** — a tree-walking interpreter over the same
-  AST. Every test runs *both* and requires them to agree, which is the only
-  practical way to catch codegen that produces a plausible wrong number.
+- The complete compiler pipeline is small enough to read.
+- The backend hand-encodes REX prefixes, ModR/M bytes, signed division,
+  comparisons, relative calls, and backpatched jumps.
+- Generated functions follow the System V AMD64 ABI. Temporary expression
+  spills are tracked so every generated `call` is correctly 16-byte aligned.
+- JIT pages obey W^X: writable while filled, read/execute while called.
+- A tree-walking interpreter provides an independent oracle. Every behavioral
+  test must agree in both backends.
+- Byte-exact golden tests also lock down important instruction encodings and
+  call-alignment sequences.
+
+See [the architecture guide](docs/02-architecture.md), [the code generator](docs/05-x86-codegen.md),
+and [the calling-convention notes](docs/07-calling-convention.md).
 
 ## Quick start
 
 ```bash
 sudo apt-get install -y g++ make
 
-make run                                  # compile a sample and dump its machine code
-make test                                 # 51 differential tests
-make bench                                # the table above
+make run
+make test                  # 63 differential cases + encoding goldens
+make bench
 
-./build/nutjit "let x = 5; x * 2;"        # 10
-./build/nutjit --dump "1 + 2;"            # show the generated machine code
-./build/nutjit --interp "1 + 2;"          # run through the reference interpreter
-./build/nutjit --file program.nut         # run a file
-./build/nutjit --repl                     # interactive; definitions persist
+./build/nutjit "let x = 5; x * 2;"
+./build/nutjit --dump "1 + 2;"
+./build/nutjit --interp "1 + 2;"
+./build/nutjit --file program.nut
+./build/nutjit --repl      # successful variables/functions persist
 ```
 
-## Status — complete
+## Status
 
 | # | Milestone | State |
 |---|-----------|-------|
-| 0 | Arithmetic JIT (lex → parse → x86-64 → run) | ✅ done |
-| 1 | Variables, `let`, stack frames | ✅ done |
-| 2 | Comparisons + `if`/`else` (jump backpatching) | ✅ done |
-| 3 | Loops (`while`, backward jumps) | ✅ done |
-| 4 | Functions, arguments, recursion | ✅ done |
-| 5 | Constant folding, peephole, interpreter baseline | ✅ done |
-| 6 | REPL, benchmarks, CI, `v1.0.0` | ✅ done |
+| 0 | Arithmetic JIT | ✅ done |
+| 1 | Variables and stack frames | ✅ done |
+| 2 | Comparisons and conditionals | ✅ done |
+| 3 | Loops | ✅ done |
+| 4 | Functions and recursion | ✅ done |
+| 5 | Optimisation and interpreter oracle | ✅ done |
+| 6 | REPL, benchmark, tests, CI, and releases | ✅ done |
 
-**51/51 tests pass**, build is warning-free, and every test value is produced by
-executing JIT-compiled machine code *and* cross-checked against the interpreter.
+The release build is warning-free. `make test` currently proves 63 behavioral
+cases through both backends and six byte-level encoding properties.
 
-## Verifying the output yourself
-
-Never trust an encoding you have not checked:
+## Inspect the output
 
 ```bash
-./build/nutjit --dump "1 + 2;" 2>&1 | grep -E '^[0-9a-f ]+$' | xxd -r -p > /tmp/c.bin
-objdump -D -b binary -m i386:x86-64 /tmp/c.bin
-```
-
-## Repository layout
-
-```
-nutjit/
-├── src/          # lexer, parser, codegen, jit memory, interpreter, cli
-├── include/      # headers
-├── tests/        # differential test suite
-├── docs/         # architecture, codegen, roadmap, milestones, ADRs
-└── Makefile      # all / run / test / bench / clean
+./build/nutjit --dump "1 + 2;" 2>&1 |
+  grep -E '^[0-9a-f ]+$' | xxd -r -p > /tmp/nutjit-code.bin
+objdump -D -b binary -m i386:x86-64 /tmp/nutjit-code.bin
 ```
 
 ## Requirements
 
-Linux or WSL2 on **x86-64** with `g++` (C++17). The JIT emits x86-64 and uses
-`mmap`/`mprotect`, so it is deliberately platform-specific — see
-[ADR 0003](docs/decisions/0003-x86-only.md).
+Linux or WSL2 on x86-64 with `g++` (C++17) and `make`. The JIT deliberately
+targets the System V x86-64 ABI and uses `mmap`/`mprotect`.
 
 ## License
 

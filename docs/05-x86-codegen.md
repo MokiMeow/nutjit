@@ -37,7 +37,7 @@ This is the heart of the project: turning an AST into bytes the CPU will run.
 return nonsense, or the CPU raises `#DE` and your process dies. This is the
 single most common first bug in a hand-rolled x86 backend.
 
-## The stack-machine strategy
+## The baseline and optimized strategies
 
 Every expression leaves its result in `RAX`:
 
@@ -48,9 +48,10 @@ emit(Binary op)  -> emit(left); push rax
                     <op> rax, rcx
 ```
 
-Correct for any nesting depth, needs no register allocator — and deliberately
-wasteful, which is what makes milestone 5's register allocation a *measurable*
-improvement rather than a claim.
+The naive benchmark path retains this stack-machine strategy. The optimized
+path uses `R10` and `R11` for common intermediates, compact signed immediates,
+and tracked stack spills when the pool is exhausted or a value must survive a
+nested call.
 
 ## Verifying what you emitted
 
@@ -74,6 +75,8 @@ shows `(bad)`, you have a byte wrong.
 - **M3**: backward jumps (the offset is known immediately, so no patching).
 - **M4**: `call rel32`, arguments in `RDI, RSI, RDX, RCX, R8, R9`, and 16-byte
   stack alignment at the call site.
+- **M5**: AST folding, compact immediates, scratch-register allocation, and a
+  safe spill path.
 
 ## References
 
