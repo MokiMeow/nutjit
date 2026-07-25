@@ -7,12 +7,12 @@ Build them in order — the path is strictly linear (see the
 | # | Milestone | State |
 |---|-----------|-------|
 | 0 | [Arithmetic JIT](milestone-0-arithmetic-jit.md) | ✅ done |
-| 1 | [Variables](milestone-1-variables.md) | ⬜ |
-| 2 | [Conditionals](milestone-2-conditionals.md) | ⬜ |
-| 3 | [Loops](milestone-3-loops.md) | ⬜ |
-| 4 | [Functions](milestone-4-functions.md) | ⬜ |
-| 5 | [Optimisation](milestone-5-optimisation.md) | ⬜ |
-| 6 | [Polish](milestone-6-polish.md) | ⬜ |
+| 1 | [Variables](milestone-1-variables.md) | ✅ done |
+| 2 | [Conditionals](milestone-2-conditionals.md) | ✅ done |
+| 3 | [Loops](milestone-3-loops.md) | ✅ done |
+| 4 | [Functions](milestone-4-functions.md) | ✅ done |
+| 5 | [Optimisation](milestone-5-optimisation.md) | ✅ done |
+| 6 | [Polish](milestone-6-polish.md) | ✅ done |
 
 ## Every milestone spec has
 

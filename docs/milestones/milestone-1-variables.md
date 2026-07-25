@@ -1,4 +1,4 @@
-# Milestone 1 — Variables
+# Milestone 1 — Variables ✅ (done)
 
 **Goal:** `let` bindings and variable references, stored in a real stack frame.
 
@@ -10,22 +10,22 @@ mapping names to slots, and the function prologue/epilogue that makes
 
 ## Tasks
 
-- [ ] **Lexer**: scan identifiers (`[A-Za-z_][A-Za-z0-9_]*`); a keyword table
+- [x] **Lexer**: scan identifiers (`[A-Za-z_][A-Za-z0-9_]*`); a keyword table
       recognising `let`; add `Ident`, `Let`, `Assign` (`=`), `Semicolon`.
-- [ ] **AST**: add `Let` (name + initialiser), `Var` (name), and a `Block`/
+- [x] **AST**: add `Let` (name + initialiser), `Var` (name), and a `Block`/
       program node holding a statement list.
-- [ ] **Parser**: `program := statement*`,
+- [x] **Parser**: `program := statement*`,
       `statement := 'let' IDENT '=' expr ';' | expr ';'`. The value of the
       program is its last expression statement.
-- [ ] **Environment**: a compile-time map name → slot index, assigned in
+- [x] **Environment**: a compile-time map name → slot index, assigned in
       declaration order; report a use of an undeclared name as an error.
-- [ ] **Codegen**:
+- [x] **Codegen**:
   - prologue `push rbp` (`55`), `mov rbp, rsp` (`48 89 E5`),
     `sub rsp, N` (`48 81 EC imm32`), with **N rounded up to a multiple of 16**;
   - store `mov [rbp-off], rax` (`48 89 45 disp8` for small offsets);
   - load `mov rax, [rbp-off]` (`48 8B 45 disp8`);
   - epilogue `leave` (`C9`) + `ret` (`C3`).
-- [ ] **Tests**: `let x = 5; x * 2;` → 10; shadowing/redeclaration behaviour;
+- [x] **Tests**: `let x = 5; x * 2;` → 10; shadowing/redeclaration behaviour;
       multiple variables; using an undeclared name must be rejected.
 
 ## Files
@@ -35,10 +35,10 @@ mapping names to slots, and the function prologue/epilogue that makes
 
 ## Definition of Done
 
-- [ ] `let a = 3; let b = 4; a * b + 1;` returns 13 from generated code.
-- [ ] Undeclared variables are rejected with a clear message and offset.
-- [ ] Frame size is a multiple of 16 (alignment holds for milestone 4).
-- [ ] `make all` warning-free; `make test` green including the new cases.
+- [x] `let a = 3; let b = 4; a * b + 1;` returns 13 from generated code.
+- [x] Undeclared variables are rejected with a clear message and offset.
+- [x] Frame size is a multiple of 16 (alignment holds for milestone 4).
+- [x] `make all` warning-free; `make test` green including the new cases.
 
 ## Notes
 
