@@ -1,60 +1,42 @@
-# 03 — Lexer & parser (the front end)
+# 03 — Lexer, parser, and validation
 
-## The lexer
+## Lexer
 
-`src/lexer.cpp` is a hand-written scanner: a loop over characters that skips
-whitespace, accumulates digit runs into an `int64_t`, and maps single characters
-to operator tokens. Every token carries its **source offset**, which is what
-makes error messages point at the right place.
+`src/lexer.cpp` is a hand-written scanner. Every token carries a byte offset.
+Integer accumulation is checked before every digit is added, so literals above
+`INT64_MAX` fail at their source position instead of overflowing C++.
 
-```
-"2 + 30"  ->  [Number(2)@0, Plus@2, Number(30)@4, End@6]
-```
+Identifiers are scanned once and classified through the keyword table (`let`,
+`if`, `else`, `while`, `fn`, and `return`).
 
-Unknown characters throw `std::runtime_error` naming the character and offset.
+## Recursive-descent parser
 
-Milestone 1 adds identifiers and keywords: scan an alphanumeric run, then look
-it up in a keyword table (`let`, later `if`, `while`, `fn`) — the standard
-approach that avoids a separate keyword scanner.
-
-## The parser
-
-`src/parser.cpp` is **recursive descent**: one function per precedence level.
+One function implements each precedence level:
 
 ```
-expr   := term (('+' | '-') term)*
-term   := factor (('*' | '/') factor)*
-factor := NUMBER | '(' expr ')' | '-' factor
+comparison := sum (('<' | '>' | '<=' | '>=' | '==' | '!=') sum)*
+sum        := product (('+' | '-') product)*
+product    := unary (('*' | '/') unary)*
+unary      := '-' unary | primary
+primary    := NUMBER | IDENT | call | '(' comparison ')'
 ```
 
-Two properties fall out of this shape for free:
+Programs add blocks, `let`, assignment, conditionals, loops, functions, and
+returns. Looping within a precedence level gives left associativity; calling
+the next tighter level gives precedence without a table.
 
-- **Precedence** — `term` is *called by* `expr`, so multiplication binds tighter
-  than addition. `2+3*4` parses as `2+(3*4)` without any precedence table.
-- **Left associativity** — each level loops (`while` over its operators),
-  folding the accumulated node into the left-hand side. `100-10-5` becomes
-  `(100-10)-5`, which is why it evaluates to 85 rather than 95.
+## Semantic validation
 
-**Unary minus** is desugared: `-x` is parsed as `0 - x`, so the code generator
-never needs a unary case. Small trick, one less code path.
+Parsing is followed by a pass that collects function signatures and checks:
 
-## Why recursive descent
+- duplicate function names and duplicate parameters,
+- unknown functions and wrong call arity,
+- unknown variables and assignments,
+- `return` outside a function,
+- use of a variable only when it is definitely declared.
 
-- The code *is* the grammar — you can read one against the other.
-- Error messages are natural: each function knows what it expected.
-- No parser generator, no build step, no generated code to debug. For a language
-  this size, table-driven parsing would add machinery without adding capability.
-
-## Growing the grammar
-
-Later milestones extend it to statements and declarations:
-
-```
-program   := statement*
-statement := 'let' IDENT '=' expr ';' | 'if' '(' expr ')' block ('else' block)?
-           | 'while' '(' expr ')' block | 'fn' IDENT '(' params ')' block
-           | expr ';'
-```
-
-Keep the one-function-per-rule discipline: it's what keeps a hand-written parser
-readable as the language grows.
+An `if` declaration survives after the conditional only when both branches
+declare it. A declaration made only inside a `while` does not survive because
+the loop may execute zero times. These rules prevent the JIT from loading an
+uninitialized frame slot and ensure the interpreter and JIT reject the same
+invalid program.

@@ -20,9 +20,9 @@ generator is a few hundred lines of C++ that emits opcode bytes.
 2. **Always working, always tested.** Each milestone leaves a compiler that
    builds clean and passes a test suite whose expected values are produced by
    JIT-compiled code.
-3. **Simple structures, real results.** A stack-machine code generator first
-   (clear, no register allocator), then a proper allocator in milestone 5 once
-   there is something worth optimising — so the *improvement* is measurable.
+3. **Simple structures, real results.** A stack-machine baseline first, then
+   bounded scratch-register allocation, folding, and compact immediates — so
+   each improvement remains readable and measurable.
 4. **Zero cost, zero dependencies.** g++ and POSIX. Nothing else.
 
 ## What it is *not*
@@ -39,7 +39,7 @@ source text
     │  lexer          src/lexer.cpp      -> tokens
     ▼
   tokens
-    │  parser         src/parser.cpp     -> AST (include/ast.hpp)
+    │  parser + validator               -> AST (include/ast.hpp)
     ▼
    AST
     │  codegen        src/codegen.cpp    -> std::vector<uint8_t>
@@ -50,8 +50,9 @@ machine code bytes
 callable function ── run() ──▶ int64_t
 ```
 
-Milestone 0 implements this whole spine for integer arithmetic. Every later
-milestone widens the language while reusing the same four stages.
+Milestone 0 implemented this spine for integer arithmetic. Later milestones
+widened the language while preserving the same boundaries; the interpreter is
+an independent backend over the validated AST.
 
 Read the [architecture doc](02-architecture.md) next, or
 [getting started](01-getting-started.md) to run it.

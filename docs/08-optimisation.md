@@ -1,74 +1,36 @@
 # 08 — Optimisation
 
-*Milestone 5.* Until then the code generator is deliberately naive — that's the
-baseline the optimisations are measured against.
+The naive backend is retained as the benchmark baseline. The optimized backend
+applies three small, inspectable improvements.
 
-## What's wrong with the stack machine
+## Constant folding
 
-For `2 + 3`, milestone 0 emits:
+Pure binary expressions with literal children become one literal AST node.
+Addition, subtraction, and multiplication use explicitly defined
+two's-complement wrapping. Division by zero and `INT64_MIN / -1` remain runtime
+operations so the optimizer never invokes C++ undefined behavior.
 
-```
-movabs rax, 2
-push   rax
-movabs rax, 3
-mov    rcx, rax
-pop    rax
-add    rax, rcx
-```
+## Scratch-register allocation
 
-Six instructions, two memory round-trips, for something a compiler would emit as
-`mov eax, 5`. The waste is structural: every operand goes through `RAX`, and
-every intermediate spills to the stack.
+The optimized emitter uses caller-saved `R10` and `R11` for intermediate
+values. A live scratch value is never kept across a subtree containing a call.
+When both registers are busy, the emitter falls back to a tracked stack spill.
+This bounded pool is simpler than a full IR/liveness allocator, but removes the
+common `push`/`pop` pair and has a safe spill path.
 
-## The three optimisations
+## Instruction selection
 
-### 1. Constant folding (AST level)
+- Nonnegative 32-bit literals use `mov eax, imm32` instead of `movabs`.
+- Signed 8-bit right operands use compact immediate forms for arithmetic and
+  comparisons.
+- Comparisons normalize results with `setcc` and `movzx`.
 
-Fold `Binary(op, Number, Number)` into a single `Number` before codegen. `2+3*4`
-becomes `Number(14)` — the whole expression compiles to one `movabs`. Cheap to
-implement, dramatic on constant-heavy code, and it's a pure AST→AST pass so it
-can't break the backend.
+`tests/check-encodings.sh` locks down representative byte sequences. Behavioral
+tests independently require the JIT and interpreter to agree.
 
-Watch out: don't fold division by zero at compile time — leave it to run time
-(or report it as an error deliberately).
+## Measurement
 
-### 2. Register allocation
-
-Give the code generator a small pool of scratch registers (`RAX, RCX, RDX, RSI,
-RDI, R8–R11` are all caller-saved and free) instead of one accumulator plus the
-stack. For an expression tree, a simple approach:
-
-- Track the next free register; compile the left side into register *r*, the
-  right into *r+1*, and emit `op r, r+1`.
-- Spill to the stack only when the tree is deeper than the register pool
-  (**Sethi–Ullman numbering** tells you exactly when — compile the deeper
-  subtree first to minimise spills).
-
-This removes almost every `push`/`pop` in realistic expressions.
-
-### 3. Peephole
-
-A post-pass over the emitted instruction list, rewriting local patterns:
-
-- `push rax; pop rax` → nothing.
-- `mov rcx, rax; pop rax` where the pop overwrites → reorder/remove.
-- `movabs rax, imm` where `imm` fits in 32 bits → `mov eax, imm32`
-  (`B8` + 4 bytes) — 5 bytes instead of 10, and the zero-extension is free.
-
-To do peephole work you need an intermediate list of *instructions* rather than
-raw bytes — which is why milestone 5 introduces one, with byte emission as the
-final step.
-
-## Measuring it (the point)
-
-The optimisations only count if they're measured. Milestone 6 publishes:
-
-| implementation | `fib(30)` |
-|---|---|
-| tree-walking interpreter | ~X ms |
-| nutjit M0-style codegen | ~Y ms |
-| nutjit optimised | ~Z ms |
-
-Benchmark honestly: same AST, same machine, several runs, report the median, and
-say what the compile time was as well as the run time (JIT compile time is part
-of the cost — that's the real trade-off a JIT makes).
+`make bench` uses three interpreter runs, 21 compile samples, and 21 JIT runs,
+then reports the median. It also verifies every backend returns the same value
+and prints naive versus optimized code size. Compile and run time are shown
+separately because compilation is part of the JIT tradeoff.
