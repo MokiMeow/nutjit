@@ -1,4 +1,4 @@
-# AGENTS.md — how this repo is built
+# AGENTS.md: how this repo is built
 
 The working agreement for this repository: anyone contributing to nutjit should
 read it fully before making changes. If anything here conflicts with a stray note elsewhere, **this
@@ -8,9 +8,9 @@ file wins.**
 
 ## 1. How the work is organised
 
-- **Planning** — plans milestones, defines Definitions of Done, reviews
+- **Planning**: plans milestones, defines Definitions of Done, reviews
   diffs, keeps docs honest.
-- **Implementation** — proceed one milestone at a time against `docs/milestones/`,
+- **Implementation**: proceed one milestone at a time against `docs/milestones/`,
   keeping the build green and the tests passing.
 
 The loop: **pick the lowest-numbered unfinished milestone → implement it →
@@ -42,12 +42,12 @@ docs/CHANGELOG → commit → next.**
 |---------|--------------|
 | `make all` | Build `build/nutjit` (zero warnings expected). |
 | `make run` | Compile a sample expression, dump its machine code, run it. |
-| `make test` | Run `tests/run-tests.sh` — the expression suite. |
+| `make test` | Run `tests/run-tests.sh`: the expression suite. |
 | `make clean` | Remove `build/`. |
 
 **Definition of "it works":**
-1. `make clean && make all` — no warnings.
-2. `make test` — all cases pass, exit 0.
+1. `make clean && make all`: no warnings.
+2. `make test`: all cases pass, exit 0.
 3. The new feature's own test cases return correct values.
 
 Never claim a milestone is done without running the tests and reading the
@@ -99,17 +99,17 @@ interpreter of the same AST.
 - Do not add an interpreter as the *primary* execution path (milestone 6 adds
   one only as a benchmark baseline).
 - Do not shell out to an assembler or linker.
-- Do not skip `make test` because "the codegen looks right" — a wrong byte is a
+- Do not skip `make test` because "the codegen looks right": a wrong byte is a
   crash, not a warning.
 - Do not break existing tests to make a new feature fit; fix the design.
 
 ## 8. Tools reference
 
-- **g++** (C++17) — the only compiler needed.
-- **`mmap`/`mprotect`** (POSIX) — executable memory; see `src/jitmem.cpp`.
-- **Intel SDM / [x86 reference](https://www.felixcloutier.com/x86/)** — the
+- **g++** (C++17): the only compiler needed.
+- **`mmap`/`mprotect`** (POSIX): executable memory; see `src/jitmem.cpp`.
+- **Intel SDM / [x86 reference](https://www.felixcloutier.com/x86/)**: the
   authority for every byte you emit.
-- **`objdump -D -b binary -m i386:x86-64`** — disassemble a `--dump` to check
+- **`objdump -D -b binary -m i386:x86-64`**: disassemble a `--dump` to check
   your encodings (see [docs/09](docs/09-testing-and-debugging.md)).
 
 Build one milestone, test it, document it, commit it. Then the next.

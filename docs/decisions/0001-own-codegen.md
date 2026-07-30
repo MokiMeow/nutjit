@@ -1,4 +1,4 @@
-# ADR 0001 — Emit machine code ourselves (not LLVM, not an assembler)
+# ADR 0001: Emit machine code ourselves (not LLVM, not an assembler)
 
 **Status:** accepted · **Date:** 2026
 
@@ -6,7 +6,7 @@
 
 A language implementation needs a backend. Options:
 
-1. **Tree-walking interpreter** — no code generation at all.
+1. **Tree-walking interpreter**: no code generation at all.
 2. **Emit assembly text**, then shell out to `as`/`gcc` and `dlopen` the result.
 3. **Use LLVM** (or libgccjit, libjit) as the backend.
 4. **Emit machine-code bytes directly** into executable memory.
@@ -21,8 +21,8 @@ pages.
 - Options 1–3 all skip the thing this project exists to demonstrate. An
   interpreter never touches machine code; an assembler pipeline outsources
   encoding and adds a process spawn per compile (not a JIT); LLVM is a
-  ~30-million-line dependency where the interesting work — instruction
-  selection, register allocation, encoding — is done *for* you.
+  ~30-million-line dependency where the interesting work: instruction
+  selection, register allocation, encoding: is done *for* you.
 - Emitting bytes is what makes this a **JIT**: compile in memory, jump in,
   no external tools, microsecond compile times.
 - The knowledge is transferable and rare: REX prefixes, ModR/M, W^X memory, and

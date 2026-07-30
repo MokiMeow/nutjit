@@ -1,4 +1,4 @@
-# Milestone 1 — Variables ✅ (done)
+# Milestone 1: Variables ✅ (done)
 
 **Goal:** `let` bindings and variable references, stored in a real stack frame.
 
@@ -43,11 +43,11 @@ mapping names to slots, and the function prologue/epilogue that makes
 ## Notes
 
 Use `disp8` (`48 89 45 F8`) while offsets fit in a signed byte, and fall back to
-`disp32` (`48 89 85 imm32`) beyond that — or just always use `disp32` for
+`disp32` (`48 89 85 imm32`) beyond that, or just always use `disp32` for
 simplicity and note the trade-off.
 
 ## References
 
-- [docs/07 — Calling convention](../07-calling-convention.md) (frames, alignment)
+- [docs/07: Calling convention](../07-calling-convention.md) (frames, alignment)
 
-**Next:** [Milestone 2 — Conditionals](milestone-2-conditionals.md).
+**Next:** [Milestone 2: Conditionals](milestone-2-conditionals.md).

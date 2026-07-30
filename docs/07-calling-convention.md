@@ -1,4 +1,4 @@
-# 07 — Calling convention (System V AMD64)
+# 07: Calling convention (System V AMD64)
 
 Generated functions follow the Linux/WSL2 System V AMD64 ABI.
 

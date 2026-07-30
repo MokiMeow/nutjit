@@ -1,4 +1,4 @@
-# Milestone 6 — Polish ✅
+# Milestone 6: Polish ✅
 
 **Goal:** a persistent REPL, an honest benchmark, comprehensive tests, green
 CI, and reproducible releases.

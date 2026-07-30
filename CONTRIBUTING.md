@@ -5,7 +5,7 @@ welcome.
 
 ## Before you start
 
-- Read [AGENTS.md](AGENTS.md) — the operating manual, which applies to humans
+- Read [AGENTS.md](AGENTS.md): the operating manual, which applies to humans
   too.
 - Skim [docs/00-overview.md](docs/00-overview.md), the
   [roadmap](docs/04-roadmap.md), and
@@ -39,6 +39,6 @@ gets a comment with its byte encoding.
 
 ## Reporting issues
 
-Include the expression, the expected and actual result, and — for crashes — the
+Include the expression, the expected and actual result, and: for crashes: the
 `--dump` output run through `objdump` (see
 [docs/09](docs/09-testing-and-debugging.md)).

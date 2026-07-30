@@ -1,4 +1,4 @@
-# 03 — Lexer, parser, and validation
+# 03: Lexer, parser, and validation
 
 ## Lexer
 

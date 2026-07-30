@@ -1,4 +1,4 @@
-# 09 — Testing and debugging
+# 09: Testing and debugging
 
 A wrong machine-code byte may crash or return a plausible wrong value, so
 nutjit tests behavior and encoding independently.

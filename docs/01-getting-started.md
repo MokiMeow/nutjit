@@ -1,4 +1,4 @@
-# 01 — Getting started
+# 01: Getting started
 
 ## Requirements
 

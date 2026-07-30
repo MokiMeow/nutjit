@@ -1,4 +1,4 @@
-# Milestone 5 — Optimisation ✅
+# Milestone 5: Optimisation ✅
 
 **Goal:** improve generated code and measure it against a stable naive
 baseline.
@@ -46,4 +46,4 @@ optimized encoding is smaller for this workload.
 - [x] Optimized code is measurably smaller than naive code.
 - [x] `make all` is warning-free and `make test` is green.
 
-**Next:** [Milestone 6 — Polish](milestone-6-polish.md).
+**Next:** [Milestone 6: Polish](milestone-6-polish.md).

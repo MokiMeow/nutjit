@@ -1,4 +1,4 @@
-# 05 — x86-64 code generation
+# 05: x86-64 code generation
 
 This is the heart of the project: turning an AST into bytes the CPU will run.
 
@@ -8,11 +8,11 @@ This is the heart of the project: turning an AST into bytes the CPU will run.
 [prefixes] [REX] [opcode] [ModR/M] [SIB] [displacement] [immediate]
 ```
 
-- **REX** — the 64-bit prefix. `0x48` is `REX.W` = "operate on 64-bit
+- **REX**: the 64-bit prefix. `0x48` is `REX.W` = "operate on 64-bit
   registers." Almost every instruction we emit starts with it.
-- **ModR/M** — encodes the operands. `0xC8` for `add rax, rcx` means
+- **ModR/M**: encodes the operands. `0xC8` for `add rax, rcx` means
   "register-direct, source RCX, destination RAX."
-- **Immediate** — literal bytes, **little-endian** (least significant first),
+- **Immediate**: literal bytes, **little-endian** (least significant first),
   which is why `movabs rax, 2` is `48 b8 02 00 00 00 00 00 00 00`.
 
 ## The instructions milestone 0 emits
@@ -33,7 +33,7 @@ This is the heart of the project: turning an AST into bytes the CPU will run.
 ### The `idiv` trap
 
 `idiv` divides the 128-bit value in `RDX:RAX`, not just `RAX`. If you forget
-`cqo`, whatever garbage is in `RDX` becomes the high half — so `84 / 2` might
+`cqo`, whatever garbage is in `RDX` becomes the high half, so `84 / 2` might
 return nonsense, or the CPU raises `#DE` and your process dies. This is the
 single most common first bug in a hand-rolled x86 backend.
 
@@ -70,7 +70,7 @@ shows `(bad)`, you have a byte wrong.
 - **M1**: `push rbp; mov rbp, rsp; sub rsp, N` prologue, `mov [rbp-N], rax`
   local slots, `leave; ret` epilogue.
 - **M2**: `cmp rax, rcx` + `setcc al` + `movzx rax, al`; `jcc rel32` with
-  **backpatching** — emit the jump with a placeholder offset, record its
+  **backpatching**: emit the jump with a placeholder offset, record its
   position, fill in the real distance once the target is known.
 - **M3**: backward jumps (the offset is known immediately, so no patching).
 - **M4**: `call rel32`, arguments in `RDI, RSI, RDX, RCX, R8, R9`, and 16-byte
@@ -80,7 +80,7 @@ shows `(bad)`, you have a byte wrong.
 
 ## References
 
-- [felixcloutier.com/x86](https://www.felixcloutier.com/x86/) — per-instruction
+- [felixcloutier.com/x86](https://www.felixcloutier.com/x86/): per-instruction
   encodings.
-- Intel SDM Volume 2 — the authority.
-- [OSDev — X86-64 Instruction Encoding](https://wiki.osdev.org/X86-64_Instruction_Encoding)
+- Intel SDM Volume 2: the authority.
+- [OSDev: X86-64 Instruction Encoding](https://wiki.osdev.org/X86-64_Instruction_Encoding)

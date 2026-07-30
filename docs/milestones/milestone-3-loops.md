@@ -1,6 +1,6 @@
-# Milestone 3 — Loops ✅ (done)
+# Milestone 3: Loops ✅ (done)
 
-**Goal:** `while` loops — the first *backward* jumps, plus assignment so a loop
+**Goal:** `while` loops: the first *backward* jumps, plus assignment so a loop
 can make progress.
 
 ## Concepts
@@ -17,7 +17,7 @@ structure in a single-pass code generator, and mutation of locals.
   - compile the condition; `test rax, rax`; `je rel32` **forward** placeholder
     to the loop exit;
   - compile the body;
-  - `jmp rel32` **backward** to `loop_start` — the displacement is
+  - `jmp rel32` **backward** to `loop_start`: the displacement is
     `loop_start - (position_after_this_jmp)`, computable right away;
   - patch the exit `je`.
 - [x] Assignment reuses milestone 1's slot lookup and `mov [rbp-off], rax`.
@@ -40,8 +40,8 @@ structure in a single-pass code generator, and mutation of locals.
 ## Notes
 
 The classic bug is computing the backward displacement from the *start* of the
-`jmp` rather than the byte *after* it — a 5-byte error that usually lands
+`jmp` rather than the byte *after* it: a 5-byte error that usually lands
 mid-instruction and raises SIGILL. Reuse the same helper the forward patcher
 uses so the convention lives in exactly one place.
 
-**Next:** [Milestone 4 — Functions](milestone-4-functions.md).
+**Next:** [Milestone 4: Functions](milestone-4-functions.md).

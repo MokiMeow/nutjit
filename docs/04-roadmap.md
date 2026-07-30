@@ -1,4 +1,4 @@
-# 04 — Roadmap
+# 04: Roadmap
 
 All planned milestones are complete. The v1.1 audit closed the correctness and
 polish gaps found after the original v1.0 release.
@@ -17,7 +17,7 @@ polish gaps found after the original v1.0 release.
 
 | implementation | fib(30) run | compile | speedup |
 |---|---:|---:|---:|
-| tree-walking interpreter | 3507.69 ms | — | 1.0× |
+| tree-walking interpreter | 3507.69 ms |: | 1.0× |
 | naive JIT | 5.08 ms | 0.001 ms | 690.9× |
 | optimized JIT | 4.72 ms | 0.002 ms | 742.5× |
 
@@ -25,7 +25,7 @@ Code size was 208 bytes naive and 151 bytes optimized in that run. Timing
 varies by host; the benchmark uses repeated medians and verifies all three
 backends return `fib(30) = 832040`.
 
-## Definition of Done — met
+## Definition of Done: met
 
 nutjit compiles variables, control flow, and recursive functions to native
 x86-64 at runtime; rejects invalid programs before execution; agrees with an

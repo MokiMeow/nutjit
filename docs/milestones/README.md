@@ -1,7 +1,7 @@
 # Milestones
 
 Each milestone leaves a compiler that **builds clean and passes its tests**.
-Build them in order — the path is strictly linear (see the
+Build them in order: the path is strictly linear (see the
 [roadmap](../04-roadmap.md)).
 
 | # | Milestone | State |
@@ -22,7 +22,7 @@ Build them in order — the path is strictly linear (see the
 
 1. Pick the lowest-numbered unfinished milestone.
 2. Implement its tasks; keep `make all` warning-free.
-3. Add test cases for the new feature and make `make test` pass — the values
+3. Add test cases for the new feature and make `make test` pass: the values
    must be produced by JIT-compiled code.
 4. Update the concept doc, tick the DoD, update the roadmap/README/CHANGELOG.
 5. Commit (`type(scope): …`), keep CI green.

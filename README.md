@@ -2,7 +2,7 @@
 
 <p align="center">
   <em>A small language with a JIT compiler that emits real x86-64 machine code
-  into executable memory and jumps to it — no LLVM and no interpreter in the
+  into executable memory and jumps to it: no LLVM and no interpreter in the
   execution path.</em>
 </p>
 
@@ -30,12 +30,21 @@ code written at runtime.
 source → lexer → parser + validation → AST → optimise → x86-64 bytes → W^X memory → CALL
 ```
 
+## Architecture
+
+The front end produces a validated AST shared by two backends. The interpreter
+is the semantic oracle; the JIT lowers the same tree into System V AMD64
+instructions, resolves branches and calls, copies the bytes into writable
+pages, changes those pages to read/execute, and invokes the generated entry
+point. Differential tests compare both paths while byte-level tests pin the
+important encodings.
+
 ## Measured result
 
 One representative WSL2 run of `make bench`:
 
 ```
-nutjit benchmark — fib(30), single-threaded medians
+nutjit benchmark: fib(30), single-threaded medians
   3 interpreter runs, 21 compile samples, 21 JIT runs
 
   fib(30) = 832040  (all three back ends agree)
@@ -56,7 +65,7 @@ a call.
 
 ```
 $ ./build/nutjit --dump "2 + 3 * 4 - 1;"
-b8 0d 00 00 00        # mov eax, 13 — one instruction
+b8 0d 00 00 00        # mov eax, 13: one instruction
 ```
 
 ## The language
@@ -142,6 +151,24 @@ objdump -D -b binary -m i386:x86-64 /tmp/nutjit-code.bin
 Linux or WSL2 on x86-64 with `g++` (C++17) and `make`. The JIT deliberately
 targets the System V x86-64 ABI and uses `mmap`/`mprotect`.
 
+## Limitations
+
+The language uses signed 64-bit integers and targets only the System V x86-64
+ABI. It has no floating-point values, aggregates, garbage collector, native
+object-file output, debugger integration, or cross-platform backend. Benchmark
+claims cover the documented recursive integer workload, not general compiler
+performance.
+
+## Documentation
+
+Read the [architecture](docs/02-architecture.md), then the
+[lexer and parser](docs/03-lexer-and-parser.md),
+[x86-64 code generator](docs/05-x86-codegen.md),
+[JIT memory policy](docs/06-jit-memory.md),
+[calling convention](docs/07-calling-convention.md), and
+[optimization notes](docs/08-optimisation.md). Testing and disassembly
+workflows are in [docs/09](docs/09-testing-and-debugging.md).
+
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT: see [LICENSE](LICENSE).

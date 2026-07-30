@@ -1,11 +1,11 @@
-# 00 — Overview
+# 00: Overview
 
 ## What nutjit is
 
 nutjit is a small programming language whose implementation is a **just-in-time
 compiler**: it translates source code into x86-64 machine code at runtime,
 writes those bytes into executable memory, and calls them. There is no
-interpreter in the execution path and no LLVM behind the curtain — the code
+interpreter in the execution path and no LLVM behind the curtain: the code
 generator is a few hundred lines of C++ that emits opcode bytes.
 
 ## The one-sentence idea
@@ -21,7 +21,7 @@ generator is a few hundred lines of C++ that emits opcode bytes.
    builds clean and passes a test suite whose expected values are produced by
    JIT-compiled code.
 3. **Simple structures, real results.** A stack-machine baseline first, then
-   bounded scratch-register allocation, folding, and compact immediates — so
+   bounded scratch-register allocation, folding, and compact immediates, so
    each improvement remains readable and measurable.
 4. **Zero cost, zero dependencies.** g++ and POSIX. Nothing else.
 

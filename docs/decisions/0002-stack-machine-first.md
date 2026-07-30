@@ -1,4 +1,4 @@
-# ADR 0002 — Stack-machine codegen first, register allocation later
+# ADR 0002: Stack-machine codegen first, register allocation later
 
 **Status:** accepted · **Date:** 2026
 
@@ -30,7 +30,7 @@ in milestone 5** as an explicit, measured improvement.
 ## Consequences
 
 - Milestone 0's output is deliberately inefficient (`push`/`pop` around every
-  binary operation). This is documented, not accidental — see
+  binary operation). This is documented, not accidental: see
   [docs/08](../08-optimisation.md).
 - Milestone 5 introduces an intermediate instruction list (needed for peephole
   work) with byte emission as the final step, a mild refactor of `codegen.cpp`.

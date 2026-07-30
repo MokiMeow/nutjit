@@ -6,7 +6,13 @@ All notable changes to nutjit are documented here. The format follows
 
 ## [Unreleased]
 
-## [1.1.0] — 2026-07-25
+### Changed
+
+- Expanded the README with the complete execution architecture, supported
+  scope, limitations, and documentation map.
+- Standardized first-party Markdown punctuation.
+
+## [1.1.0]: 2026-07-25
 
 ### Added
 
@@ -41,7 +47,7 @@ All notable changes to nutjit are documented here. The format follows
 - CI now enforces `-Werror`, runs the real benchmark smoke test, and uses the
   current Node 24 checkout action.
 
-## [1.0.0] — 2026-07-25
+## [1.0.0]: 2026-07-25
 
 ### Added
 
@@ -65,7 +71,7 @@ All notable changes to nutjit are documented here. The format follows
 - No strings, heap, or types beyond signed 64-bit integers.
 - System V x86-64 only.
 
-## [0.1.0] — milestone 0
+## [0.1.0]: milestone 0
 
 - First working version: compile integer arithmetic to x86-64 machine code at
   runtime and execute it.

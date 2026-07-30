@@ -1,6 +1,6 @@
-# Milestone 2 — Conditionals ✅ (done)
+# Milestone 2: Conditionals ✅ (done)
 
-**Goal:** comparison operators and `if`/`else`, which means jumps — and
+**Goal:** comparison operators and `if`/`else`, which means jumps and
 therefore **backpatching**.
 
 ## Concepts
@@ -38,13 +38,13 @@ patching a jump's displacement after the target position is known.
 
 - [x] Both branches of an `if`/`else` return the right value, verified by tests.
 - [x] All six comparison operators tested.
-- [x] Nested conditionals work — proof the patching is position-independent.
+- [x] Nested conditionals work: proof the patching is position-independent.
 - [x] `make all` warning-free; `make test` green.
 
 ## Notes
 
 Backpatching is where off-by-one errors live. If a jump lands one byte off you
-usually get SIGILL — disassemble (`objdump`) and check the target lands exactly
+usually get SIGILL: disassemble (`objdump`) and check the target lands exactly
 on an instruction boundary.
 
-**Next:** [Milestone 3 — Loops](milestone-3-loops.md).
+**Next:** [Milestone 3: Loops](milestone-3-loops.md).

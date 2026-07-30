@@ -1,4 +1,4 @@
-# 02 — Architecture
+# 02: Architecture
 
 Data flows through explicit stages:
 

@@ -1,4 +1,4 @@
-# 08 — Optimisation
+# 08: Optimisation
 
 The naive backend is retained as the benchmark baseline. The optimized backend
 applies three small, inspectable improvements.

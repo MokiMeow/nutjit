@@ -1,4 +1,4 @@
-# Milestone 0 — Arithmetic JIT ✅ (done)
+# Milestone 0: Arithmetic JIT ✅ (done)
 
 **Goal:** compile an integer arithmetic expression to x86-64 machine code at
 runtime and execute it.
@@ -11,16 +11,16 @@ executable memory.
 
 ## What shipped
 
-- [x] `src/lexer.cpp` — numbers, `+ - * / ( )`, source offsets, errors.
-- [x] `src/parser.cpp` — recursive descent; precedence and left associativity
+- [x] `src/lexer.cpp`: numbers, `+ - * / ( )`, source offsets, errors.
+- [x] `src/parser.cpp`: recursive descent; precedence and left associativity
       from the grammar; unary minus desugared to `0 - x`.
-- [x] `include/ast.hpp` — `Number` / `Binary` nodes with `unique_ptr` children.
-- [x] `src/codegen.cpp` — stack-machine codegen emitting `movabs`, `push`,
+- [x] `include/ast.hpp`: `Number` / `Binary` nodes with `unique_ptr` children.
+- [x] `src/codegen.cpp`: stack-machine codegen emitting `movabs`, `push`,
       `pop`, `mov`, `add`, `sub`, `imul`, `cqo`+`idiv`, `ret`.
-- [x] `src/jitmem.cpp` — `JitBuffer`: `mmap` RW → copy → `mprotect` RX → call;
+- [x] `src/jitmem.cpp`: `JitBuffer`: `mmap` RW → copy → `mprotect` RX → call;
       RAII cleanup, non-copyable.
-- [x] `src/main.cpp` — CLI with `--dump`, stdin fallback, error reporting.
-- [x] `tests/run-tests.sh` — 16 cases (arithmetic, precedence, associativity,
+- [x] `src/main.cpp`: CLI with `--dump`, stdin fallback, error reporting.
+- [x] `tests/run-tests.sh`: 16 cases (arithmetic, precedence, associativity,
       unary minus, 64-bit result, rejected syntax errors).
 
 ## Definition of Done
@@ -41,7 +41,7 @@ nutjit: 86 bytes of machine code
 ## References
 
 - [felixcloutier.com/x86](https://www.felixcloutier.com/x86/)
-- [docs/05 — x86-64 codegen](../05-x86-codegen.md),
-  [docs/06 — JIT memory](../06-jit-memory.md)
+- [docs/05: x86-64 codegen](../05-x86-codegen.md),
+  [docs/06: JIT memory](../06-jit-memory.md)
 
-**Next:** [Milestone 1 — Variables](milestone-1-variables.md).
+**Next:** [Milestone 1: Variables](milestone-1-variables.md).
