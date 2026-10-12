@@ -13,6 +13,9 @@ nutjit tests behavior and encoding independently.
 2. `tests/check-encodings.sh`: exact or structural byte checks for constant
    folding, scratch-register arithmetic, compact immediates, and call-alignment
    padding.
+3. `tests/jitmem-test.cpp`: independently exercises the executable mapping,
+   validates a real machine-code return value, and rejects out-of-range
+   entry points before execution.
 
 Coverage includes arithmetic wraparound, control flow, declarations, calls,
 arity, recursion, invalid literals, and persistent REPL state.

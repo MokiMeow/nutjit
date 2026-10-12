@@ -35,9 +35,13 @@ run: $(BIN)
 	@echo "--- a program with a function, a loop and recursion ---"
 	@$(BIN) "fn fib(n) { if (n < 2) { return n; } return fib(n-1) + fib(n-2); } fib(20);"
 
-test: $(BIN)
+$(BUILD)/jitmem-test: tests/jitmem-test.cpp src/jitmem.cpp include/jitmem.hpp | $(BUILD)
+	$(CXX) $(CXXFLAGS) -Werror tests/jitmem-test.cpp src/jitmem.cpp -o $@
+
+test: $(BIN) $(BUILD)/jitmem-test
 	@bash tests/run-tests.sh $(BIN)
 	@bash tests/check-encodings.sh $(BIN)
+	@$(BUILD)/jitmem-test
 
 bench: $(BIN)
 	@$(BIN) --bench

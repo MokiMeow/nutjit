@@ -47,6 +47,16 @@ it must leave its result in `RAX` and end with `ret`
 - **`mprotect` failing.** Some hardened environments deny `PROT_EXEC`.
   `JitBuffer` reports the `errno` message rather than crashing.
 - **Empty buffers.** Mapping zero bytes is rejected explicitly.
+- **Oversize mappings.** Before rounding the code length up to a page
+  boundary, the allocator checks for integer overflow. This prevents a
+  wrapped size from being used for an undersized executable mapping.
+- **Invalid entry offsets.** `run(entry_offset)` checks the original code
+  length rather than the page-rounded mapping, so it cannot enter padding
+  or bytes beyond the generated code. Valid function offsets are unchanged.
+
+A separate `tests/jitmem-test.cpp` executes a small hard-coded x86-64
+function returning 42, rejects offsets at the code and page boundaries, and
+verifies that empty buffers fail cleanly. It runs during `make test`.
 
 ## Later milestones
 
