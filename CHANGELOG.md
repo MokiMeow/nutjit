@@ -8,6 +8,9 @@ All notable changes to nutjit are documented here. The format follows
 
 ### Changed
 
+- Reject page-size rounding overflow and out-of-range generated-code entry
+  offsets before mapping or executing JIT memory; keep W^X semantics intact.
+- Add a standalone executable-memory regression test to `make test`.
 - Expanded the README with the complete execution architecture, supported
   scope, limitations, and documentation map.
 - Standardized first-party Markdown punctuation.

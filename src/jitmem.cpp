@@ -4,7 +4,9 @@
  * them to read+execute. Keeping write and execute permissions separate in time
  * (W^X) is what modern OSes expect; some harden against ever allowing both. */
 
+#include <cerrno>
 #include <cstring>
+#include <limits>
 #include <stdexcept>
 #include <unistd.h>
 #include <sys/mman.h>
@@ -20,7 +22,12 @@ JitBuffer::JitBuffer(const std::vector<uint8_t> &code) {
         throw std::runtime_error("jit: could not determine the page size");
 
     const size_t page_size = static_cast<size_t>(page);
-    size_ = ((code.size() + page_size - 1) / page_size) * page_size;
+    // Reject overflow before page rounding: a wrapped mapping would be
+    // smaller than the bytes copied into it.
+    if (code.size() > std::numeric_limits<size_t>::max() - (page_size - 1))
+        throw std::length_error("jit: code size overflows page rounding");
+    code_size_ = code.size();
+    size_ = ((code_size_ + page_size - 1) / page_size) * page_size;
 
     memory_ = mmap(nullptr, size_, PROT_READ | PROT_WRITE,
                    MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
